@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SoMeme — meme ops</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🃏</text></svg>">
+<style>
+  :root { --bg:#0d0d0f; --panel:#16161a; --panel2:#1d1d23; --line:#2a2a33; --txt:#e8e8ec; --dim:#9a9aa5; --red:#e0223c; --red2:#ff4d63; --ok:#2fbf71; --warn:#f5a623; }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--bg); color:var(--txt); font:14px/1.45 'Segoe UI', system-ui, sans-serif; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+  header { display:flex; align-items:center; gap:18px; padding:10px 18px; border-bottom:1px solid var(--line); background:var(--panel); }
+  .logo { font-weight:900; font-size:18px; letter-spacing:.5px; } .logo b { color:var(--red2); }
+  nav { display:flex; gap:4px; }
+  nav button { background:none; border:0; color:var(--dim); padding:7px 14px; border-radius:8px; cursor:pointer; font-weight:600; font-size:13px; }
+  nav button.on { background:var(--panel2); color:var(--txt); box-shadow:inset 0 0 0 1px var(--line); }
+  nav button:hover { color:var(--txt); }
+  .spacer { flex:1; }
+  select,input,textarea { background:var(--panel2); color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:7px 10px; font:inherit; }
+  input[type=color] { padding:2px; width:36px; height:30px; }
+  main { flex:1; display:flex; min-height:0; }
+  /* left: The Vault */
+  #vault { width:300px; min-width:300px; border-right:1px solid var(--line); background:var(--panel); display:flex; flex-direction:column; }
+  #vault .head { padding:10px 12px 6px; }
+  #vault h3 { font-size:12px; text-transform:uppercase; letter-spacing:1.5px; color:var(--dim); margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; }
+  #vault .tabs { display:flex; gap:4px; margin:6px 0; flex-wrap:wrap; }
+  .chip { border:1px solid var(--line); background:none; color:var(--dim); padding:3px 10px; border-radius:99px; font-size:12px; cursor:pointer; }
+  .chip.on { background:var(--red); border-color:var(--red); color:#fff; }
+  #tagRow { display:flex; gap:4px; overflow-x:auto; padding:2px 12px 8px; scrollbar-width:thin; }
+  #tplGrid { flex:1; overflow-y:auto; display:grid; grid-template-columns:1fr 1fr; grid-auto-rows:124px; gap:8px; padding:10px 12px; align-content:start; }
+  .tpl { background:var(--panel2); border:1px solid var(--line); border-radius:10px; overflow:hidden; cursor:pointer; position:relative; height:124px; }
+  .tpl:hover { border-color:var(--red); }
+  .tpl img, .tpl video { width:100%; height:96px; object-fit:cover; display:block; background:#000; }
+  .tpl .nm { font-size:11px; padding:5px 7px; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tpl .heat { position:absolute; top:5px; right:5px; font-size:11px; background:rgba(0,0,0,.65); border-radius:6px; padding:1px 6px; }
+  .tpl .luv { position:absolute; top:4px; left:4px; background:rgba(0,0,0,.55); border:0; color:#888; border-radius:6px; padding:1px 6px; cursor:pointer; font-size:12px; }
+  .tpl .luv.on { color:var(--red2); }
+  /* center views */
+  #center { flex:1; display:flex; flex-direction:column; min-width:0; }
+  .view { flex:1; display:none; flex-direction:column; min-height:0; }
+  .view.on { display:flex; }
+  /* chat */
+  #chatBar { display:flex; gap:8px; align-items:center; padding:8px 16px; border-bottom:1px solid var(--line); background:var(--panel); position:relative; }
+  #chatTitle { font-weight:700; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #chatMenu { position:absolute; top:44px; left:12px; z-index:20; background:var(--panel2); border:1px solid var(--line); border-radius:12px; width:300px; max-height:380px; overflow-y:auto; display:none; box-shadow:0 12px 30px rgba(0,0,0,.5); }
+  #chatMenu.on { display:block; }
+  #chatMenu .row { padding:9px 12px; border-bottom:1px solid var(--line); cursor:pointer; display:flex; justify-content:space-between; gap:6px; }
+  #chatMenu .row:hover { background:var(--panel); }
+  #chatMenu .row .t { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:13px; }
+  #chatMenu .row .d { color:var(--dim); font-size:11px; }
+  #chatMenu .row .x { background:none; border:0; color:var(--dim); cursor:pointer; }
+  #chatLog { flex:1; overflow-y:auto; padding:22px 26px; display:flex; flex-direction:column; gap:14px; }
+  .msg { max-width:720px; }
+  .msg.user { align-self:flex-end; background:var(--red); color:#fff; padding:9px 14px; border-radius:14px 14px 4px 14px; }
+  .msg.agent { align-self:flex-start; color:var(--txt); }
+  .msg.sys { align-self:center; color:var(--dim); font-size:12px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:12px; max-width:460px; }
+  .card img, .card video { width:100%; border-radius:8px; display:block; background:#000; }
+  .card .ttl { font-weight:700; margin:8px 0 2px; }
+  .card .prov { font-size:12px; color:var(--dim); margin-bottom:8px; }
+  .card .btns { display:flex; gap:6px; flex-wrap:wrap; }
+  .btn { background:var(--panel2); border:1px solid var(--line); color:var(--txt); padding:6px 12px; border-radius:8px; cursor:pointer; font-size:12.5px; font-weight:600; }
+  .btn:hover { border-color:var(--red2); }
+  .btn.primary { background:var(--red); border-color:var(--red); color:#fff; }
+  .btn.sm { padding:3px 8px; font-size:11.5px; }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .chips .chip { font-size:12px; }
+  #composerBar { border-top:1px solid var(--line); background:var(--panel); padding:12px 18px; display:flex; gap:10px; align-items:flex-end; }
+  #attach { display:flex; gap:8px; }
+  #attach .att { position:relative; }
+  #attach img, #attach video { height:52px; border-radius:8px; border:1px solid var(--line); }
+  #attach .x { position:absolute; top:-6px; right:-6px; background:var(--red); border:0; color:#fff; width:18px; height:18px; border-radius:50%; font-size:11px; cursor:pointer; line-height:1; }
+  #promptBox { flex:1; resize:none; height:52px; }
+  /* generic panels */
+  .pane { flex:1; overflow-y:auto; padding:22px 26px; }
+  .pane h2 { font-size:17px; margin-bottom:4px; }
+  .pane .sub { color:var(--dim); font-size:13px; margin-bottom:16px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:12px; }
+  .dropCard { background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .dropCard img, .dropCard video { width:100%; display:block; background:#000; }
+  .dropCard .meta { padding:8px 10px; font-size:12px; color:var(--dim); }
+  .dropCard .meta b { color:var(--txt); display:block; font-size:12.5px; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row { display:flex; gap:10px; align-items:center; }
+  .missionCard { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:10px; }
+  .missionCard h4 { margin-bottom:4px; }
+  .missionCard .sub { font-size:12px; color:var(--dim); margin-bottom:8px; }
+  .pill { font-size:11px; padding:2px 8px; border-radius:99px; border:1px solid var(--line); color:var(--dim); }
+  .pill.ok { color:var(--ok); border-color:var(--ok); }
+  .pill.warn { color:var(--warn); border-color:var(--warn); }
+  label.f { display:block; margin:10px 0 4px; font-size:12px; color:var(--dim); font-weight:600; text-transform:uppercase; letter-spacing:.8px; }
+  /* composer modal */
+  #modal { position:fixed; inset:0; background:rgba(0,0,0,.75); display:none; align-items:center; justify-content:center; z-index:50; }
+  #modal.on { display:flex; }
+  #modalBody { background:var(--panel); border:1px solid var(--line); border-radius:16px; width:min(1020px,96vw); max-height:94vh; display:flex; flex-direction:column; overflow:hidden; }
+  #modalHead { display:flex; align-items:center; padding:12px 16px; border-bottom:1px solid var(--line); gap:8px; }
+  #modalHead b { flex:1; }
+  #styleBar { display:flex; gap:6px; align-items:center; padding:8px 16px; border-bottom:1px solid var(--line); flex-wrap:wrap; background:var(--panel2); }
+  #styleBar .lbl { font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:.5px; margin-left:6px; }
+  #styleBar button.tog { min-width:30px; }
+  #styleBar button.tog.on { background:var(--red); border-color:var(--red); color:#fff; }
+  #compWrap { display:flex; gap:14px; padding:14px; min-height:0; overflow:auto; }
+  #stage { position:relative; flex:1; min-width:320px; align-self:flex-start; }
+  #stage img { width:100%; display:block; border-radius:8px; }
+  .tbox { position:absolute; border:1.5px dashed rgba(255,77,99,.5); cursor:move; display:flex; align-items:flex-start; justify-content:center; padding:2px; }
+  .tbox.sel { border-color:var(--red2); border-style:solid; }
+  .tbox span { color:#fff; font-family:Impact,'Arial Black',sans-serif; text-transform:uppercase; text-align:center; line-height:1.12;
+    text-shadow:-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,2px 2px 0 #000; width:100%; overflow:hidden; }
+  .tbox span.clean { font-family:'Segoe UI',Arial,sans-serif; text-transform:none; text-shadow:none; }
+  .tbox .rs { position:absolute; right:-6px; bottom:-6px; width:12px; height:12px; background:var(--red); border-radius:3px; cursor:nwse-resize; }
+  #compSide { width:290px; display:flex; flex-direction:column; gap:8px; }
+  #compSide textarea { resize:vertical; min-height:40px; }
+  .toast { position:fixed; bottom:18px; right:18px; background:var(--panel2); border:1px solid var(--line); border-left:3px solid var(--red); padding:10px 16px; border-radius:10px; z-index:99; }
+  .spin { display:inline-block; width:14px; height:14px; border:2px solid var(--dim); border-top-color:var(--red2); border-radius:50%; animation:sp 0.8s linear infinite; vertical-align:-2px; }
+  @keyframes sp { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">So<b>Meme</b></div>
+  <nav id="nav">
+    <button data-v="make" class="on">Make</button>
+    <button data-v="feed">Feed</button>
+    <button data-v="missions">Missions</button>
+    <button data-v="drops">Drops</button>
+    <button data-v="settings">Settings</button>
+  </nav>
+  <div class="spacer"></div>
+  <span id="trendStamp" style="font-size:12px;color:var(--dim)"></span>
+  <select id="wsSel" title="Workspace"></select>
+</header>
+<main>
+  <aside id="vault">
+    <div class="head">
+      <h3>The Vault <button class="btn sm" id="importBtn" title="Import a template">+ Import</button></h3>
+      <input id="q" placeholder="Search templates…" style="width:100%">
+      <div class="tabs" id="typeTabs">
+        <button class="chip on" data-t="image">Memes</button>
+        <button class="chip" data-t="video">Videos</button>
+        <button class="chip" data-t="library">Library</button>
+      </div>
+      <div class="tabs" id="srcTabs">
+        <button class="chip" data-s="trending">Trending</button>
+        <button class="chip on" data-s="classics">Classics</button>
+        <button class="chip" data-s="liked">Liked</button>
+      </div>
+      <div class="tabs" id="libTabs" style="display:none">
+        <button class="chip on" data-l="assets">Uploads</button>
+        <button class="chip" data-l="exports">Exports</button>
+      </div>
+    </div>
+    <div id="tagRow"></div>
+    <div id="tplGrid"></div>
+  </aside>
+
+  <section id="center">
+    <!-- MAKE (chat) -->
+    <div class="view on" id="v-make">
+      <div id="chatBar">
+        <button class="btn sm" id="chatListBtn">☰</button>
+        <span id="chatTitle">New chat</span>
+        <button class="btn sm" id="newChatBtn">+ New chat</button>
+        <div id="chatMenu"></div>
+      </div>
+      <div id="chatLog"></div>
+      <div id="composerBar">
+        <button class="btn" id="chatUploadBtn" title="Upload an image and use it as a template">+</button>
+        <input type="file" id="chatUploadInput" accept="image/*" style="display:none">
+        <div id="attach"></div>
+        <textarea id="promptBox" placeholder="Ask for a meme or a video meme… (e.g. 'roast agencies that take 6 weeks to ship a landing page')"></textarea>
+        <select id="styleSel" title="Caption style">
+          <option value="">Auto</option><option value="top">Top bar</option><option value="tiktok">TikTok</option><option value="snapchat">Snap</option>
+        </select>
+        <select id="countSel" title="How many"><option>1</option><option>2</option><option>3</option></select>
+        <button class="btn primary" id="sendBtn">Send</button>
+      </div>
+    </div>
+    <!-- FEED -->
+    <div class="view" id="v-feed">
+      <div class="pane">
+        <div class="row" style="justify-content:space-between">
+          <div><h2>Trend Feed</h2><div class="sub" id="feedSub">Fresh formats worth jumping on.</div></div>
+          <button class="btn" id="scoutBtn">Run trend scout now</button>
+        </div>
+        <div class="grid" id="feedGrid"></div>
+      </div>
+    </div>
+    <!-- MISSIONS -->
+    <div class="view" id="v-missions">
+      <div class="pane">
+        <div class="row" style="justify-content:space-between">
+          <div><h2>Missions</h2><div class="sub">Brief once → memes on autopilot → everything lands in Drops.</div></div>
+          <button class="btn primary" id="newMission">+ New mission</button>
+        </div>
+        <div id="missionList"></div>
+        <div id="missionForm" style="display:none;max-width:640px"></div>
+      </div>
+    </div>
+    <!-- DROPS -->
+    <div class="view" id="v-drops">
+      <div class="pane">
+        <div class="row" style="justify-content:space-between">
+          <div><h2>Drops</h2><div class="sub">Everything generated, waiting for your yes/no.</div></div>
+          <div class="row">
+            <select id="dropSource"><option value="">All sources</option></select>
+            <select id="dropFilter"><option value="">All</option><option value="new">New</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select>
+          </div>
+        </div>
+        <div class="grid" id="dropGrid"></div>
+      </div>
+    </div>
+    <!-- SETTINGS -->
+    <div class="view" id="v-settings">
+      <div class="pane" style="max-width:640px">
+        <h2>Workspace</h2><div class="sub">Per-brand voice and guardrails — used in every generation.</div>
+        <label class="f">Brand voice / context</label>
+        <textarea id="setVoice" style="width:100%" rows="3" placeholder="e.g. SoGrow — AI Instagram growth. Dry humor, founder-to-founder, no cringe hashtags."></textarea>
+        <label class="f">Banned topics (comma separated)</label>
+        <input id="setBanned" style="width:100%">
+        <div class="row" style="margin-top:10px"><input type="checkbox" id="setNsfw" style="width:auto"><span>Allow NSFW templates</span></div>
+        <div style="margin-top:14px"><button class="btn primary" id="saveSettings">Save</button></div>
+        <h2 style="margin-top:28px">New workspace</h2>
+        <div class="row" style="margin-top:8px"><input id="newWsName" placeholder="e.g. zbj, golf-client"><button class="btn" id="newWsBtn">Create</button></div>
+        <h2 style="margin-top:28px">AI image tools (Higgsfield)</h2>
+        <div class="sub" id="hfStatus">Checking…</div>
+        <h2 style="margin-top:28px">Claude / MCP</h2>
+        <div class="sub">Local MCP registered as <code>someme</code> — Claude Code can generate memes directly (restart a session to pick it up).</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Composer modal -->
+<div id="modal">
+  <div id="modalBody">
+    <div id="modalHead"><b id="compName">Composer</b>
+      <button class="btn" id="saveLayoutBtn" title="Save box positions as this template's default layout">Save layout</button>
+      <button class="btn primary" id="exportBtn">Export PNG</button>
+      <button class="btn" id="closeModal">✕</button>
+    </div>
+    <div id="styleBar">
+      <span class="lbl">Presets</span>
+      <button class="btn sm" data-preset="impact">Impact</button>
+      <button class="btn sm" data-preset="clean">Clean</button>
+      <button class="btn sm" data-preset="minimal">Minimal</button>
+      <span class="lbl">Size</span>
+      <button class="btn sm tog" id="szDown">−</button>
+      <button class="btn sm tog" id="szUp">+</button>
+      <span class="lbl">Color</span>
+      <input type="color" id="boxColor" value="#ffffff">
+      <span class="lbl">Align</span>
+      <button class="btn sm tog" data-align="left">⯇</button>
+      <button class="btn sm tog on" data-align="center">≡</button>
+      <button class="btn sm tog" data-align="right">⯈</button>
+      <button class="btn sm tog on" id="togUpper" title="UPPERCASE">AA</button>
+      <button class="btn sm tog on" id="togStroke" title="Black outline">◈</button>
+      <button class="btn sm tog" id="togFont" title="Clean font">Aa</button>
+      <button class="btn sm" id="delBox" style="margin-left:auto">Delete box</button>
+      <button class="btn sm" id="addBox">+ Box</button>
+    </div>
+    <div id="compWrap">
+      <div id="stage"><img id="stageImg" draggable="false"></div>
+      <div id="compSide">
+        <div class="row"><input type="checkbox" id="capMode" style="width:auto"><span>Caption mode</span>
+          <select id="capStyle"><option value="top">Top bar</option><option value="tiktok">TikTok</option><option value="snapchat">Snap</option></select>
+        </div>
+        <div id="boxInputs"></div>
+        <div id="exportOut" style="font-size:12px;color:var(--dim)"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const url=new URLSearchParams(location.search);
+let WS=url.get('ws')||'default', VIEW=url.get('view')||'make';
+let TPLS=[], TREND=[], LIKED=[], ATTACHED=null, LASTVAULT={t:'image',s:'classics',l:'assets'};
+let CHATID=null, CHATMSGS=[]; // persistent chat state
+const api=(p,o)=>fetch(p,o?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)}:undefined).then(r=>r.json());
+const del=(p)=>fetch(p,{method:'DELETE'}).then(r=>r.json());
+const toast=t=>{const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),3500);};
+function deep(){history.replaceState(null,'',"?ws="+WS+"&view="+VIEW+(CHATID?"&chat="+CHATID:""));}
+const isVid=f=>/\.mp4$/i.test(f||'');
+const mediaTag=(src,cls)=>isVid(src)?"<video src='"+src+"' controls "+(cls?"class='"+cls+"'":"")+"></video>":"<img src='"+src+"' "+(cls?"class='"+cls+"'":"")+" loading='lazy'>";
+
+// ---------- nav ----------
+$('#nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;showView(b.dataset.v);
+  if(VIEW==='drops')loadDrops();if(VIEW==='missions')loadMissions();if(VIEW==='feed')loadFeed();};
+function showView(v){$$('#nav button').forEach(x=>x.classList.toggle('on',x.dataset.v===v));$$('.view').forEach(x=>x.classList.toggle('on',x.id==='v-'+v));VIEW=v;deep();}
+
+// ---------- state / workspaces ----------
+async function loadState(){const s=await api("/api/state?ws="+WS);
+  $('#wsSel').innerHTML=s.workspaces.map(w=>"<option "+(w===WS?"selected":"")+">"+w+"</option>").join('');
+  $('#setVoice').value=s.profile.voice||'';$('#setBanned').value=(s.profile.banned_topics||[]).join(', ');$('#setNsfw').checked=!!s.profile.nsfw;
+  $('#trendStamp').textContent=s.trending_updated?('trends: '+new Date(s.trending_updated).toLocaleString()):'trends: never run';
+  if(!s.counts.templates)toast('Template library empty — run engine/seed-templates.js');}
+$('#wsSel').onchange=e=>{WS=e.target.value;CHATID=null;CHATMSGS=[];renderChat();deep();loadState();loadChats();loadDrops();loadMissions();};
+
+// ---------- vault ----------
+async function loadVault(){
+  const t=LASTVAULT.t;
+  $('#libTabs').style.display=t==='library'?'flex':'none';
+  $('#srcTabs').style.display=t==='library'?'none':'flex';
+  if(t==='library'){const kind=LASTVAULT.l;
+    if(kind==='liked'){/* handled by srcTabs normally */}
+    const r=await api("/api/library?ws="+WS+"&kind="+kind);
+    $('#tplGrid').innerHTML=(r.items||[]).map(x=>"<div class='tpl' data-lib='"+x.url+"'>"+mediaTag(x.url)+"<div class='nm' title='"+x.name+"'>"+x.name+"</div></div>").join('')||emptyMsg('Nothing here yet.');
+    return;}
+  const s=LASTVAULT.s;
+  const r=await api("/api/templates?type="+t+"&tab="+s+"&q="+encodeURIComponent($('#q').value));
+  const items=r.items||[];
+  if(s==='classics'&&t==='image'){TPLS=items;
+    const tags={};items.forEach(x=>(x.tags||[]).forEach(g=>tags[g]=(tags[g]||0)+1));
+    $('#tagRow').innerHTML=Object.entries(tags).sort((a,b)=>b[1]-a[1]).slice(0,24).map(([g])=>"<button class='chip' data-g='"+g+"'>#"+g+"</button>").join('');
+  } else if(s==='trending'){TREND=items;}
+  if(s!=='trending'){window.VAULTITEMS=items;}
+  $('#tplGrid').innerHTML=items.map(x=>{
+    let img;
+    if(s==='trending')img=x.preview||'';
+    else if(x.type==='video')img='/templates/videos/'+(x.preview||'');
+    else img='/templates/images/'+x.file;
+    const heat=s==='trending'?"<span class='heat'>"+'🔥'.repeat(x.heat||1)+"</span>":'';
+    const luv=s!=='trending'?"<button class='luv"+(LIKED.includes(x.id)?' on':'')+"' data-like='"+x.id+"'>♥</button>":'';
+    return "<div class='tpl' data-id='"+(x.id||'')+"' data-src='"+s+"'><img src='"+img+"' loading='lazy' onerror='this.style.opacity=.15'>"+heat+luv+"<div class='nm' title=\""+String(x.name||'').replace(/"/g,'&quot;')+"\">"+(x.name||'')+"</div></div>";
+  }).join('')||emptyMsg('Nothing here yet.');}
+const emptyMsg=t=>"<div style='color:var(--dim);padding:20px;grid-column:1/3'>"+t+"</div>";
+$('#typeTabs').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;LASTVAULT.t=b.dataset.t;$$('#typeTabs .chip').forEach(x=>x.classList.toggle('on',x===b));loadVault();};
+$('#srcTabs').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;LASTVAULT.s=b.dataset.s;$$('#srcTabs .chip').forEach(x=>x.classList.toggle('on',x===b));loadVault();};
+$('#libTabs').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;LASTVAULT.l=b.dataset.l;$$('#libTabs .chip').forEach(x=>x.classList.toggle('on',x===b));loadVault();};
+$('#q').oninput=()=>{clearTimeout(window._qt);window._qt=setTimeout(loadVault,300);};
+$('#tagRow').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;$('#q').value=b.dataset.g;loadVault();};
+$('#tplGrid').onclick=async e=>{
+  const likeBtn=e.target.closest('[data-like]');
+  if(likeBtn){const id=likeBtn.dataset.like;const on=!likeBtn.classList.contains('on');
+    await api("/api/templates/"+id+"/like",{liked:on});likeBtn.classList.toggle('on',on);
+    LIKED=on?[...LIKED,id]:LIKED.filter(x=>x!==id);return;}
+  const c=e.target.closest('.tpl');if(!c)return;
+  if(c.dataset.lib){window.open(c.dataset.lib,'_blank');return;}
+  if(c.dataset.src==='trending'){const idx=[...c.parentNode.children].indexOf(c);const it=TREND[idx];
+    $('#promptBox').value="Make a meme riffing on the trending format \""+(it?it.name:'')+"\" — "+((it&&it.suggested_angles&&it.suggested_angles[0])||'angle it at my brand');showView('make');return;}
+  const pool=window.VAULTITEMS||TPLS;
+  const t=pool.find(x=>x.id===c.dataset.id);if(!t)return;ATTACHED=t;renderAttach();showView('make');};
+function renderAttach(){if(!ATTACHED){$('#attach').innerHTML='';return;}
+  const src=ATTACHED.type==='video'?'/templates/videos/'+(ATTACHED.preview||''):'/templates/images/'+ATTACHED.file;
+  $('#attach').innerHTML="<div class='att'><img src='"+src+"' title=\""+ATTACHED.name+"\"><button class='x' onclick='ATTACHED=null;renderAttach()'>✕</button></div>";}
+
+// import (image template from URL, video template from file path/URL)
+$('#importBtn').onclick=async()=>{
+  const kind=LASTVAULT.t==='video'?'video':'image';
+  const name=prompt('Template name?');if(!name)return;
+  const src=prompt(kind==='video'?'Video URL or local file path (C:\\…\\clip.mp4):':'Image URL:');if(!src)return;
+  const isPath=/^[a-z]:\\/i.test(src);
+  const r=kind==='video'
+    ?await api('/api/templates/import-video',isPath?{name,file_path:src}:{name,url:src})
+    :await api('/api/templates/import',{name,url:src});
+  toast('Importing…');const res=await poll(r.job_id);
+  toast(res&&res.status==='done'?'Imported!':'Import failed');loadVault();};
+
+// ---------- chats (persistent) ----------
+async function loadChats(){const r=await api("/api/chats?ws="+WS);window.CHATLIST=r.items||[];
+  $('#chatMenu').innerHTML=(r.items||[]).map(c=>"<div class='row' data-chat='"+c.id+"'><span class='t'>"+(c.title||'Untitled')+"</span><span class='d'>"+new Date(c.updated).toLocaleDateString()+"</span><button class='x' data-delchat='"+c.id+"'>✕</button></div>").join('')||"<div class='row'><span class='t' style='color:var(--dim)'>No saved chats</span></div>";}
+$('#chatListBtn').onclick=()=>{$('#chatMenu').classList.toggle('on');loadChats();};
+$('#chatMenu').onclick=async e=>{
+  const d=e.target.closest('[data-delchat]');
+  if(d){await del("/api/chats/"+d.dataset.delchat+"?ws="+WS);loadChats();if(CHATID===d.dataset.delchat)newChat();return;}
+  const row=e.target.closest('[data-chat]');if(!row)return;
+  const c=await api("/api/chats/"+row.dataset.chat+"?ws="+WS);
+  CHATID=c.id;CHATMSGS=c.messages||[];$('#chatTitle').textContent=c.title||'Untitled';
+  $('#chatMenu').classList.remove('on');renderChat();deep();};
+$('#newChatBtn').onclick=()=>newChat();
+function newChat(){CHATID=null;CHATMSGS=[];$('#chatTitle').textContent='New chat';renderChat();deep();}
+async function saveChat(){if(!CHATMSGS.length)return;
+  const title=$('#chatTitle').textContent==='New chat'?(CHATMSGS.find(m=>m.role==='user')||{}).text?.slice(0,48)||'Untitled':$('#chatTitle').textContent;
+  $('#chatTitle').textContent=title;
+  const r=await api("/api/chats?ws="+WS,{id:CHATID,title,messages:CHATMSGS});
+  CHATID=r.id;deep();}
+
+// ---------- chat rendering ----------
+function addMsg(cls,html,skipRecord){const d=document.createElement('div');d.className='msg '+cls;d.innerHTML=html;$('#chatLog').appendChild(d);$('#chatLog').scrollTop=1e9;return d;}
+function cardHTML(m){return "<div class='card' data-id='"+m.id+"'>"+mediaTag(m.file)+
+  "<div class='ttl'>"+(m.title||'')+"</div><div class='prov'>Remixed from "+m.template_name+"</div>"+
+  "<div class='btns'><button class='btn' data-act='edit'>Edit</button>"+(isVid(m.file)?'':"<button class='btn' data-act='composer'>Open in Composer</button>")+
+  "<button class='btn' data-act='approve'>Approve</button><a class='btn' href='"+m.file+"' download>Download</a></div></div>";}
+function renderChat(){$('#chatLog').innerHTML='';
+  if(!CHATMSGS.length){addMsg('agent',"Yo. Ask for a meme or a video meme, attach a template from the Vault, or hit the Feed for what's hot. Everything lands in Drops for approval.");return;}
+  for(const m of CHATMSGS){
+    if(m.role==='user')addMsg('user',m.text);
+    else{if(m.text)addMsg('agent',m.text);
+      for(const meme of m.memes||[])addMsg('agent',cardHTML(meme));
+      if((m.chips||[]).length)addMsg('agent',"<div class='chips'>"+m.chips.map(s=>"<button class='chip' data-sug=\""+s.replace(/"/g,'&quot;')+"\">+ "+s+"</button>").join('')+"</div>");}}}
+async function send(promptOverride,editArtifact){
+  const prompt=promptOverride!=null?promptOverride:$('#promptBox').value.trim();
+  if(!prompt&&!ATTACHED)return;
+  $('#promptBox').value='';
+  addMsg('user',prompt||('[template: '+ATTACHED.name+']'));
+  CHATMSGS.push({role:'user',text:prompt||('[template: '+(ATTACHED?ATTACHED.name:'')+']')});
+  const wait=addMsg('sys',"<span class='spin'></span> cooking…");
+  let body;
+  const history=CHATMSGS.filter(m=>m.text).map(m=>({role:m.role,text:m.text}));
+  if(editArtifact){body=await api('/api/edit',{ws:WS,instruction:prompt,artifact:editArtifact});}
+  else{body=await api('/api/generate',{ws:WS,prompt,count:+$('#countSel').value,template_id:ATTACHED?ATTACHED.id:'',style:$('#styleSel').value,history});}
+  if(body.error){wait.remove();addMsg('sys','⚠ '+body.error);return;}
+  const res=await poll(body.job_id);wait.remove();
+  if(!res||res.status==='failed'){addMsg('sys','⚠ generation failed'+(res&&res.err?': '+res.err.slice(0,300):''));return;}
+  const r=res.result||{memes:[]};
+  const rec={role:'agent',text:r.commentary||'',memes:r.memes,chips:r.suggestions||[]};
+  CHATMSGS.push(rec);
+  for(const m of r.memes)addMsg('agent',cardHTML(m));
+  if(r.commentary)addMsg('agent',r.commentary);
+  if(rec.chips.length)addMsg('agent',"<div class='chips'>"+rec.chips.map(s=>"<button class='chip' data-sug=\""+s.replace(/"/g,'&quot;')+"\">+ "+s+"</button>").join('')+"</div>");
+  ATTACHED=null;renderAttach();saveChat();loadState();loadDropsCache();}
+async function poll(id){for(let i=0;i<300;i++){const j=await api('/api/jobs/'+id);if(j.status!=='running')return j;await new Promise(r=>setTimeout(r,1500));}return null;}
+$('#sendBtn').onclick=()=>send();
+$('#promptBox').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}};
+$('#chatLog').onclick=async e=>{
+  const sug=e.target.closest('[data-sug]');if(sug){send(sug.dataset.sug,lastArtifact());return;}
+  const b=e.target.closest('[data-act]');if(!b)return;const card=b.closest('.card');const art=findDrop(card.dataset.id);
+  if(!art)return toast('Artifact not found in Drops');
+  if(b.dataset.act==='approve'){await api("/api/drops/"+card.dataset.id+"/status?ws="+WS,{status:'approved'});toast('Approved → Drops');}
+  if(b.dataset.act==='edit'){const inst=window.prompt('What should change?');if(inst)send(inst,art);}
+  if(b.dataset.act==='composer'){openComposer(art);}};
+let DROPCACHE=[];function findDrop(id){return DROPCACHE.find(x=>x.id===id);}
+function lastArtifact(){for(let i=CHATMSGS.length-1;i>=0;i--){const m=CHATMSGS[i];if(m.memes&&m.memes.length)return m.memes[0];}return null;}
+async function loadDropsCache(){DROPCACHE=(await api("/api/drops?ws="+WS)).items||[];}
+setInterval(loadDropsCache,5000);
+
+// chat upload → import as template → attach
+$('#chatUploadBtn').onclick=()=>$('#chatUploadInput').click();
+$('#chatUploadInput').onchange=async e=>{const f=e.target.files[0];if(!f)return;
+  const b64=await new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.readAsDataURL(f);});
+  toast('Importing upload as template…');
+  const name=f.name.replace(/\.[^.]+$/,'');
+  const r=await api('/api/templates/import',{name,image_base64:b64});
+  const res=await poll(r.job_id);
+  if(res&&res.status==='done'&&res.result&&res.result.imported){
+    const items=(await api('/api/templates?type=image&tab=classics&q=')).items;
+    const t=items.find(x=>x.id===res.result.imported);
+    if(t){ATTACHED=t;renderAttach();toast('Attached — describe the meme you want');}
+  } else toast('Upload import failed');
+  e.target.value='';};
+
+// ---------- feed ----------
+async function loadFeed(){const t=await api('/api/trending');
+  $('#feedSub').textContent=t.updated?('Updated '+new Date(t.updated).toLocaleString()):'Never run — hit the button.';
+  $('#feedGrid').innerHTML=(t.items||[]).map(x=>"<div class='dropCard'>"+(x.preview?"<img src='"+x.preview+"' onerror='this.remove()'>":"")+
+    "<div class='meta'><b>"+x.name+"</b>"+'🔥'.repeat(x.heat||1)+" · "+(x.age||'')+"<br>"+(x.why_trending||'')+
+    (x.suggested_angles||[]).slice(0,2).map(a=>"<div>• "+a+"</div>").join('')+
+    (x.source_url?"<a href='"+x.source_url+"' target='_blank' style='color:var(--red2)'>source</a>":"")+"</div></div>").join('')||"<div style='color:var(--dim)'>No trend data yet.</div>";}
+$('#scoutBtn').onclick=async()=>{const r=await api('/api/trend-scout/run',{});toast('Trend scout running…');const res=await poll(r.job_id);if(res&&res.status==='done'){toast('Trend feed updated');loadFeed();loadState();}else toast('Trend scout failed');};
+
+// ---------- missions ----------
+function missionFormHTML(m={}){const sch=m.schedule||{mode:'daily',time:'09:00',runs_per_day:1};
+ return "<div class='missionCard'>"+
+  "<label class='f'>Name</label><input id='mName' style='width:100%' value=\""+(m.name||'')+"\" placeholder='e.g. Daily SoGrow memes'>"+
+  "<label class='f'>Type</label><select id='mType' style='width:100%'>"+['jester','ads','silly-pics'].map(t=>"<option "+(m.type===t?'selected':'')+">"+t+"</option>").join('')+"</select>"+
+  "<label class='f'>Prompt / brief <button class='btn sm' id='magicBtn' style='margin-left:8px'>✨ Magic prompt</button></label>"+
+  "<textarea id='mPrompt' style='width:100%' rows='3' placeholder='Tell the agent what to make…'>"+(m.prompt||'')+"</textarea>"+
+  "<label class='f'>Trigger</label><div class='row'><select id='mMode'><option value='daily' "+(sch.mode==='daily'?'selected':'')+">Daily at time</option><option value='new-trend' "+(sch.mode==='new-trend'?'selected':'')+">Whenever a new trend drops</option></select>"+
+  "<input id='mTime' type='time' value='"+(sch.time||'09:00')+"'><select id='mRuns'>"+[1,2,3].map(n=>"<option "+(sch.runs_per_day==n?'selected':'')+">"+n+"</option>").join('')+"</select><span style='color:var(--dim);font-size:12px'>runs/day</span></div>"+
+  "<label class='f'>Memes per run</label><select id='mCount'>"+[1,2,3,4].map(n=>"<option "+(m.count==n?'selected':'')+">"+n+"</option>").join('')+"</select>"+
+  "<div class='row' style='margin-top:10px'><input type='checkbox' id='mPostText' style='width:auto' "+(m.generate_post_text?'checked':'')+"><span>Generate post text per meme</span></div>"+
+  "<div class='row' style='margin-top:6px'><input type='checkbox' id='mNotify' style='width:auto' "+(m.notify!==false?'checked':'')+"><span>Windows toast when this mission runs</span></div>"+
+  "<label class='f'>Webhook URL (optional — Drops queue is always on)</label><input id='mHook' style='width:100%' value='"+((m.delivery&&m.delivery.webhook)||'')+"' placeholder='https://discord.com/api/webhooks/…'>"+
+  "<div class='row' style='margin-top:12px'><button class='btn primary' id='mSave'>Save mission</button><button class='btn' id='mCancel'>Cancel</button></div></div>";}
+async function loadMissions(){const r=await api("/api/missions?ws="+WS);
+  $('#missionList').innerHTML=(r.items||[]).map(m=>"<div class='missionCard' data-id='"+m.id+"'>"+
+   "<div class='row' style='justify-content:space-between'><h4>"+m.name+"</h4><span class='pill "+(m.enabled===false?'warn':'ok')+"'>"+(m.enabled===false?'paused':'armed')+"</span></div>"+
+   "<div class='sub'>"+(m.type||'jester')+" · "+((m.schedule&&m.schedule.mode)==='new-trend'?'on new trend':'daily '+((m.schedule&&m.schedule.time)||'09:00')+' ×'+((m.schedule&&m.schedule.runs_per_day)||1))+" · "+(m.count||1)+"/run"+(m.last_run?' · last: '+new Date(m.last_run).toLocaleString():'')+"</div>"+
+   "<div class='sub' style='white-space:pre-wrap'>"+String(m.prompt||'').slice(0,200)+"</div>"+
+   "<div class='row'><button class='btn' data-a='run'>Run now</button><button class='btn' data-a='edit'>Edit</button><button class='btn' data-a='dup'>Duplicate</button>"+
+   "<button class='btn' data-a='toggle'>"+(m.enabled===false?'Arm':'Pause')+"</button><button class='btn' data-a='del'>Delete</button></div></div>").join('')||"<div style='color:var(--dim)'>No missions yet.</div>";}
+$('#newMission').onclick=()=>{$('#missionForm').style.display='block';$('#missionForm').innerHTML=missionFormHTML();wireMissionForm();};
+function wireMissionForm(existing){$('#mCancel').onclick=()=>{$('#missionForm').style.display='none';};
+ $('#magicBtn').onclick=async e=>{e.preventDefault();const rough=$('#mPrompt').value||$('#mName').value;if(!rough)return toast('Type a rough idea first');
+   $('#magicBtn').textContent='✨ …';const r=await api('/api/magic-prompt',{rough,ws:WS});$('#magicBtn').textContent='✨ Magic prompt';
+   if(r.brief)$('#mPrompt').value=r.brief;else toast('Magic prompt failed');};
+ $('#mSave').onclick=async()=>{const m={...(existing||{}),name:$('#mName').value||'Untitled mission',type:$('#mType').value,prompt:$('#mPrompt').value,
+   schedule:{mode:$('#mMode').value,time:$('#mTime').value,runs_per_day:+$('#mRuns').value},count:+$('#mCount').value,
+   generate_post_text:$('#mPostText').checked,notify:$('#mNotify').checked,delivery:{webhook:$('#mHook').value||null},enabled:existing?existing.enabled!==false:true};
+  await api("/api/missions?ws="+WS,m);$('#missionForm').style.display='none';loadMissions();toast('Mission saved');};}
+$('#missionList').onclick=async e=>{const b=e.target.closest('[data-a]');if(!b)return;const id=b.closest('.missionCard').dataset.id;
+ const list=(await api("/api/missions?ws="+WS)).items;const m=list.find(x=>x.id===id);
+ if(b.dataset.a==='run'){const r=await api("/api/missions/"+id+"/run?ws="+WS,{});toast('Mission running…');const res=await poll(r.job_id);toast(res&&res.status==='done'?'Mission done → Drops':'Mission failed');loadMissions();loadDrops();}
+ if(b.dataset.a==='edit'){$('#missionForm').style.display='block';$('#missionForm').innerHTML=missionFormHTML(m);wireMissionForm(m);}
+ if(b.dataset.a==='dup'){const c={...m};delete c.id;delete c.last_run;delete c.run_count;c.name=m.name+' (copy)';await api("/api/missions?ws="+WS,c);loadMissions();toast('Duplicated');}
+ if(b.dataset.a==='toggle'){m.enabled=m.enabled===false;await api("/api/missions?ws="+WS,m);loadMissions();}
+ if(b.dataset.a==='del'){if(confirm('Delete mission "'+m.name+'"?')){await del("/api/missions/"+id+"?ws="+WS);loadMissions();}}};
+
+// ---------- drops ----------
+async function loadDrops(){const r=await api("/api/drops?ws="+WS);DROPCACHE=r.items||[];
+  const srcSel=$('#dropSource');const sources=[...new Set(DROPCACHE.map(x=>x.source||'chat'))];
+  const cur=srcSel.value;
+  srcSel.innerHTML="<option value=''>All sources</option>"+sources.map(s=>"<option "+(s===cur?'selected':'')+">"+s+"</option>").join('');
+  const f=$('#dropFilter').value, sf=srcSel.value;
+  const items=DROPCACHE.filter(x=>(!f||x.status===f)&&(!sf||(x.source||'chat')===sf));
+  $('#dropGrid').innerHTML=items.map(m=>"<div class='dropCard' data-id='"+m.id+"'>"+mediaTag(m.file)+
+    "<div class='meta'><b>"+(m.title||m.prompt||'')+"</b>"+m.template_name+" · <span class='pill "+(m.status==='approved'?'ok':m.status==='rejected'?'warn':'')+"'>"+m.status+"</span>"+
+    (m.post_text?"<div style='margin-top:4px;color:var(--txt)'>"+m.post_text+"</div>":"")+
+    "<div class='row' style='margin-top:6px'><button class='btn' data-a='approved'>✓</button><button class='btn' data-a='rejected'>✗</button><a class='btn' href='"+m.file+"' download>↓</a></div></div></div>").join('')||"<div style='color:var(--dim)'>Nothing yet — make something.</div>";}
+$('#dropFilter').onchange=loadDrops;$('#dropSource').onchange=loadDrops;
+$('#dropGrid').onclick=async e=>{const b=e.target.closest('[data-a]');if(!b)return;const id=b.closest('.dropCard').dataset.id;
+ await api("/api/drops/"+id+"/status?ws="+WS,{status:b.dataset.a});loadDrops();};
+
+// ---------- settings ----------
+$('#saveSettings').onclick=async()=>{const s=await api("/api/state?ws="+WS);const p=s.profile;
+ p.voice=$('#setVoice').value;p.banned_topics=$('#setBanned').value.split(',').map(x=>x.trim()).filter(Boolean);p.nsfw=$('#setNsfw').checked;
+ await api("/api/workspace/profile?ws="+WS,p);toast('Saved');};
+$('#newWsBtn').onclick=async()=>{const n=$('#newWsName').value.trim();if(!n)return;await api("/api/state?ws="+n);WS=n;deep();loadState();toast('Workspace created');};
+async function loadHf(){try{const r=await api('/api/ai-image/status');
+  $('#hfStatus').innerHTML=r.ready?"<span style='color:var(--ok)'>● Ready</span> — silly-pics missions and AI edits will use Higgsfield ("+(r.model||'')+")"
+    :"<span style='color:var(--warn)'>● Not set up</span> — run <code>higgsfield auth login</code> in a terminal, then <code>node engine/ai-image.js --check</code> in E:\\Projects\\SoMeme";}catch{$('#hfStatus').textContent='status unavailable';}}
+
+// ---------- composer ----------
+let COMP=null, SELBOX=-1;
+function openComposer(art){
+  const pool=window.VAULTITEMS||TPLS;
+  const t=(art&&pool.find(x=>x.id===art.template_id))||ATTACHED||(art?{id:art.template_id,name:art.template_name,file:null}:null);
+  if(!t||!t.file)return toast('Template not in library');
+  COMP={tpl:t,artifact:art||null,boxes:null,cap:art&&art.render_mode==='caption'};
+  SELBOX=-1;
+  $('#compName').textContent=t.name;$('#stageImg').src='/templates/images/'+t.file;
+  $('#capMode').checked=!!COMP.cap;$('#capStyle').value=(art&&art.caption_style)||'top';
+  $('#stageImg').onload=()=>{const defs=t.boxes&&t.boxes.length?t.boxes:defaultBoxes(t.box_count||2);
+    COMP.boxes=defs.map((b,i)=>({x:b.x!=null?b.x:5,y:b.y!=null?b.y:5,w:b.w!=null?b.w:90,h:b.h!=null?b.h:20,
+      text:(art&&art.texts&&art.texts[i])!=null?art.texts[i]:((t.example_captions||[])[i]||''),
+      color:'#ffffff',align:'center',uppercase:true,stroke:true,font:'impact'}));
+    if(COMP.cap)COMP.capText=(art&&art.caption)||'';drawBoxes();};
+  $('#modal').classList.add('on');$('#exportOut').textContent='';}
+function defaultBoxes(n){if(n<=1)return[{x:5,y:72,w:90,h:24}];if(n===2)return[{x:5,y:3,w:90,h:22},{x:5,y:75,w:90,h:22}];
+ return Array.from({length:n},(_,i)=>({x:5,y:3+(94/n)*i,w:90,h:94/n-4}));}
+function applyBoxStyle(span,b,W){span.className=b.font==='clean'?'clean':'';
+  span.style.color=b.color||'#fff';span.style.textAlign=b.align||'center';
+  span.style.textTransform=b.uppercase===false?'none':'uppercase';
+  span.style.textShadow=b.stroke===false?'none':'';
+  span.style.fontSize=(b.size?(b.size/100*W):Math.max(12,W/14*(b.w/90)))+'px';}
+function drawBoxes(){$$('.tbox').forEach(x=>x.remove());
+  const st=$('#stage'),img=$('#stageImg'),W=img.clientWidth,H=img.clientHeight;
+  $('#boxInputs').innerHTML='';
+  if($('#capMode').checked){$('#boxInputs').innerHTML="<label class='f'>Caption</label><textarea id='capText' style='width:100%'>"+(COMP.capText||'')+"</textarea>";
+    $('#capText').oninput=e=>COMP.capText=e.target.value;return;}
+  COMP.boxes.forEach((b,i)=>{
+    const d=document.createElement('div');d.className='tbox'+(i===SELBOX?' sel':'');d.dataset.i=i;
+    Object.assign(d.style,{left:b.x/100*W+'px',top:b.y/100*H+'px',width:b.w/100*W+'px',height:b.h/100*H+'px'});
+    const span=document.createElement('span');span.textContent=b.text;applyBoxStyle(span,b,W);d.appendChild(span);
+    const rs=document.createElement('div');rs.className='rs';d.appendChild(rs);st.appendChild(d);
+    d.onpointerdown=e=>{if(e.target===rs)return;e.preventDefault();selectBox(i);const sx=e.clientX,sy=e.clientY,ox=b.x,oy=b.y;
+      const mv=ev=>{b.x=Math.max(0,Math.min(95,ox+(ev.clientX-sx)/W*100));b.y=Math.max(0,Math.min(95,oy+(ev.clientY-sy)/H*100));
+        d.style.left=b.x/100*W+'px';d.style.top=b.y/100*H+'px';};
+      const up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up);};
+      addEventListener('pointermove',mv);addEventListener('pointerup',up);};
+    rs.onpointerdown=e=>{e.preventDefault();e.stopPropagation();selectBox(i);const sx=e.clientX,sy=e.clientY,ow=b.w,oh=b.h;
+      const mv=ev=>{b.w=Math.max(10,Math.min(100-b.x,ow+(ev.clientX-sx)/W*100));b.h=Math.max(6,Math.min(100-b.y,oh+(ev.clientY-sy)/H*100));
+        d.style.width=b.w/100*W+'px';d.style.height=b.h/100*H+'px';applyBoxStyle(span,b,W);};
+      const up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up);};
+      addEventListener('pointermove',mv);addEventListener('pointerup',up);};
+    const inp=document.createElement('div');
+    inp.innerHTML="<label class='f'>Box "+(i+1)+((COMP.tpl.box_semantics||[])[i]?' — '+COMP.tpl.box_semantics[i]:'')+"</label><textarea data-i='"+i+"' style='width:100%'>"+b.text+"</textarea>";
+    $('#boxInputs').appendChild(inp);
+    inp.querySelector('textarea').onfocus=()=>selectBox(i);
+    inp.querySelector('textarea').oninput=e=>{b.text=e.target.value;span.textContent=b.text;};});
+  if(SELBOX<0&&COMP.boxes.length)selectBox(0);}
+function selectBox(i){SELBOX=i;$$('.tbox').forEach(t=>t.classList.toggle('sel',+t.dataset.i===i));
+  const b=COMP.boxes[i];if(!b)return;
+  $('#boxColor').value=b.color||'#ffffff';
+  $$('#styleBar [data-align]').forEach(x=>x.classList.toggle('on',x.dataset.align===(b.align||'center')));
+  $('#togUpper').classList.toggle('on',b.uppercase!==false);
+  $('#togStroke').classList.toggle('on',b.stroke!==false);
+  $('#togFont').classList.toggle('on',b.font==='clean');}
+function restyleSel(fn){const b=COMP&&COMP.boxes[SELBOX];if(!b)return;fn(b);drawBoxes();}
+$('#boxColor').oninput=e=>restyleSel(b=>b.color=e.target.value);
+$$('#styleBar [data-align]').forEach(x=>x.onclick=()=>restyleSel(b=>b.align=x.dataset.align));
+$('#togUpper').onclick=()=>restyleSel(b=>b.uppercase=b.uppercase===false);
+$('#togStroke').onclick=()=>restyleSel(b=>b.stroke=b.stroke===false);
+$('#togFont').onclick=()=>restyleSel(b=>b.font=b.font==='clean'?'impact':'clean');
+$('#szUp').onclick=()=>restyleSel(b=>b.size=Math.min(30,(b.size||Math.round(100/9))+1));
+$('#szDown').onclick=()=>restyleSel(b=>b.size=Math.max(4,(b.size||Math.round(100/9))-1));
+$('#delBox').onclick=()=>{if(!COMP||SELBOX<0)return;COMP.boxes.splice(SELBOX,1);SELBOX=-1;drawBoxes();};
+$$('#styleBar [data-preset]').forEach(x=>x.onclick=()=>{if(!COMP)return;
+  const p=x.dataset.preset;
+  COMP.boxes.forEach(b=>{if(p==='impact'){b.font='impact';b.uppercase=true;b.stroke=true;b.color='#ffffff';}
+    if(p==='clean'){b.font='clean';b.uppercase=false;b.stroke=true;b.color='#ffffff';}
+    if(p==='minimal'){b.font='clean';b.uppercase=false;b.stroke=false;b.color='#111111';}});
+  drawBoxes();});
+$('#capMode').onchange=drawBoxes;
+$('#addBox').onclick=()=>{if(!COMP)return;COMP.boxes.push({x:10,y:40,w:80,h:18,text:'',color:'#ffffff',align:'center',uppercase:true,stroke:true,font:'impact'});drawBoxes();};
+$('#closeModal').onclick=()=>$('#modal').classList.remove('on');
+$('#saveLayoutBtn').onclick=async()=>{if(!COMP)return;await api("/api/templates/"+COMP.tpl.id+"/layout",{boxes:COMP.boxes.map(({x,y,w,h})=>({x,y,w,h}))});toast('Layout saved as template default');};
+$('#exportBtn').onclick=async()=>{if(!COMP)return;
+  const body=$('#capMode').checked
+    ?{ws:WS,template_id:COMP.tpl.id,caption:COMP.capText||'',caption_style:$('#capStyle').value}
+    :{ws:WS,template_id:COMP.tpl.id,boxes:COMP.boxes};
+  const r=await api('/api/render',body);
+  if(r.error)return toast('Render failed: '+r.error);
+  $('#exportOut').innerHTML="Exported → <a href='"+r.file+"' download style='color:var(--red2)'>download</a>";toast('Exported');};
+
+// ---------- boot ----------
+async function boot(){
+  showView(VIEW);
+  LIKED=(await api('/api/liked')).liked||[];
+  loadState();loadVault();loadChats();loadDropsCache();loadHf();
+  const chatParam=url.get('chat');
+  if(chatParam){try{const c=await api("/api/chats/"+chatParam+"?ws="+WS);if(c.id){CHATID=c.id;CHATMSGS=c.messages||[];$('#chatTitle').textContent=c.title||'Untitled';}}catch{}}
+  renderChat();
+  if(VIEW==='drops')loadDrops();if(VIEW==='missions')loadMissions();if(VIEW==='feed')loadFeed();
+}
+boot();
+</script>
+</body>
+</html>
